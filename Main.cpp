@@ -45,6 +45,7 @@ const unsigned int SCR_HEIGHT = 600;
 
 int main() 
 {
+	// ------------------------------
 	// glfw: initialize and configure
 	// ------------------------------
 
@@ -59,6 +60,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); 
 
 	
+	// --------------------
 	// glfw window creation
 	// --------------------
 	
@@ -77,9 +79,6 @@ int main()
 	//register the callback function to adjust the viewport size when the window is resized
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-	// Load OpenGL function pointers using GLAD
-	gladLoadGL();
-
 	// GLAD manages function pointers for OpenGL, so ensure that GLAD is initialized before calling any OpenGL function
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
@@ -87,39 +86,70 @@ int main()
 		return -1;
 	}
 
-	//set the viewport size
-	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+	// ------------------------------------
+	//build and compile our shader program
+	// ------------------------------------
 
-	//vertices of the triangle we want to draw
-	//equilateral triangle with side length of 1, centered at the origin
-	GLfloat vertices[] = 
-	{
-		-0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,	//left
-		0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,		//right
-		0.0f, 0.5f * float(sqrt(3))* 2/3, 0.0f		//top
-	};
+	//for storing the compile status and the error message if the compilation fails
+	int success;
+	char infoLog[512];
+
 
 	//setup and compile the vertex shader
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
 	//gpu doesn't understand shader source code, so we need to compile it first
 	glCompileShader(vertexShader);
+	//check the vertex shader for compile error
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
+		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
 
 	//setup and compile the fragment shader
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
 	glCompileShader(fragmentShader);
+	//check the fragment shader for compile error
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
+		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+
 
 	//create a shader program and link the vertex and fragment shader to it
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 	glLinkProgram(shaderProgram);
-
+	//check for linking errors
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success)
+	{
+		glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
+		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
 	//delete the shaders as they're linked into our program now and no longer necessary
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
+
+
+	// ------------------------------------------------------------------
+	// set up vertex data (and buffer(s)) and configure vertex attributes
+	// ------------------------------------------------------------------
+	//vertices of the triangle we want to draw
+	//equilateral triangle with side length of 1, centered at the origin
+	GLfloat vertices[] =
+	{
+		-0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,	//left
+		0.5f, -0.5f * float(sqrt(3)) / 3, 0.0f,		//right
+		0.0f, 0.5f * float(sqrt(3)) * 2 / 3, 0.0f		//top
+	};
 
 	// Generate a vertex buffer object (VBO) and a vertex array object (VAO) to store the vertex data and the vertex attribute configuration
 	// For sending the data between CPU to GPU in batches, we use buffer objects. 
@@ -156,13 +186,13 @@ int main()
 	//FONT Buffer - the buffer from which the information is being read to be displayed on the screen
 	//BACK Buffer - the buffer to which the information is being written to be displayed on the screen
 	//specifies the color of window's background
-	glClearColor(0.02f, 0.13f, 0.17f, 1.0f); //back buffer with the color we wan
+	//glClearColor(0.02f, 0.13f, 0.17f, 1.0f); //back buffer with the color we wan
 
 	//clear the back buffer and specify the new color to it
-	glClear(GL_COLOR_BUFFER_BIT); //front buffer
+	//glClear(GL_COLOR_BUFFER_BIT); //front buffer
 
 	//swap the back buffer with the front buffer to display the new color
-	glfwSwapBuffers(window);
+	//glfwSwapBuffers(window);
 
 	//render loop - keep running until the user closes the window
 	while(!glfwWindowShouldClose(window)) 
@@ -170,6 +200,7 @@ int main()
 		//check for use input (ESC Key) to close the window
 		processInput(window);
 
+		//rendering commands to back buffer
 		glClearColor(0.02f, 0.13f, 0.17f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glUseProgram(shaderProgram);
@@ -187,7 +218,6 @@ int main()
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
 	glDeleteProgram(shaderProgram);
-
 
 	//destroy the window and its context
 	glfwDestroyWindow(window);
